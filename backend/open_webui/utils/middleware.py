@@ -1391,6 +1391,7 @@ async def process_chat_response(
             DETECT_CODE_INTERPRETER = metadata.get("features", {}).get(
                 "code_interpreter", False
             )
+            DETECT_REASONING_CONTENT = False
 
             reasoning_tags = [
                 "think",
@@ -1423,6 +1424,7 @@ async def process_chat_response(
                 async def stream_body_handler(response):
                     nonlocal content
                     nonlocal content_blocks
+                    nonlocal DETECT_REASONING_CONTENT
 
                     response_tool_calls = []
 
@@ -1494,7 +1496,18 @@ async def process_chat_response(
                                                     ] += delta_arguments
 
                                 value = delta.get("content")
-
+                                reasoning_value = delta.get("reasoning_content")
+                                
+                                if DETECT_REASONING_CONTENT:
+                                    if reasoning_value is not None:
+                                        value = reasoning_value
+                                    else:
+                                        DETECT_REASONING_CONTENT = False
+                                        value = f"</think>\n{value}"
+                                elif reasoning_value is not None:
+                                    DETECT_REASONING_CONTENT = True
+                                    value = f"<think>\n{reasoning_value}"
+    
                                 if value:
                                     content = f"{content}{value}"
 
